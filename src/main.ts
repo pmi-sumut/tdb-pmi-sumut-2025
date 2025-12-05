@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { BNPBService } from "./service/bnpb";
 import { PmiService } from "./service/pmi";
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID || "";
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
@@ -97,6 +99,11 @@ app.get("/api/pmi/posko", async (c) => {
     throw error;
   }
 });
+
+app.get('/', (c) => {
+  const html = readFileSync(join(process.cwd(), 'public/dashboard.html'), 'utf8')
+  return c.html(html)
+})
 
 console.log(`
 📊 Google Sheet: ${GOOGLE_SHEET_ID.substring(0, 20)}...
