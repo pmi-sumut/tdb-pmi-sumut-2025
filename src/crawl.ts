@@ -11,15 +11,17 @@ const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n";
 
 const FIELDS = [
-    { name: "hilang", label: "Hilang" },
-    { name: "meninggal", label: "Meninggal" },
-    { name: "luka_sakit", label: "Luka Sakit" },
-    { name: "fasum_rusak", label: "Fasilitas Umum Rusak" },
-    { name: "pendidikan_rusak", label: "Pendidikan Rusak" },
-    { name: "rumah_ibadat_rusak", label: "Rumah Ibadah Rusak" },
-    { name: "fasyankes_rusak", label: "Fasyankes Rusak" },
-    { name: "kantor_rusak", label: "Kantor Rusak" },
-    { name: "jembatan_rusak", label: "Jembatan Rusak" },
+    { name: "hilang", label: "Hilang", type: "sum" },
+    { name: "meninggal", label: "Meninggal", type: "sum" },
+    { name: "luka_sakit", label: "Luka Sakit", type: "sum" },
+    { name: "kabupaten", label: "Kabupaten Terdampak", type: "count" },
+    { name: "rumah_rusak", label: "Rumah Rusak", type: "sum" },
+    { name: "fasum_rusak", label: "Fasilitas Umum Rusak", type: "sum" },
+    { name: "pendidikan_rusak", label: "Pendidikan Rusak", type: "sum" },
+    { name: "rumah_ibadat_rusak", label: "Rumah Ibadah Rusak", type: "sum" },
+    { name: "fasyankes_rusak", label: "Fasyankes Rusak", type: "sum" },
+    { name: "kantor_rusak", label: "Kantor Rusak", type: "sum" },
+    { name: "jembatan_rusak", label: "Jembatan Rusak", type: "sum" },
 ];
 
 interface ApiResponse {
@@ -69,6 +71,7 @@ function formatTimestamp(date: Date): string {
 
 async function fetchProvinsiData(
     fieldName: string,
+    type: string,
     attempt: number = 0
 ): Promise<number> {
     try {
@@ -81,7 +84,7 @@ async function fetchProvinsiData(
             {
             onStatisticField: fieldName,
             outStatisticFieldName: "value",
-            statisticType: "sum",
+            statisticType: type,
             },
         ]),
         returnGeometry: "false",
@@ -122,7 +125,7 @@ async function fetchProvinsiData(
         const delay = getRetryDelay(attempt);
         console.log(`[${fieldName}] Retrying in ${(delay / 1000).toFixed(2)} seconds...`);
         await sleep(delay);
-        return fetchProvinsiData(fieldName, attempt + 1);
+        return fetchProvinsiData(fieldName, type, attempt + 1);
         }
 
         console.error(`[${fieldName}] ✗ Failed after ${MAX_RETRIES + 1} attempts. Using value: 0`);
@@ -216,7 +219,7 @@ async function fetchAllData(): Promise<CrawlData> {
     };
 
     for (const field of FIELDS) {
-        const value = await fetchProvinsiData(field.name);
+        const value = await fetchProvinsiData(field.name, field.type, 0);
         results[field.label] = value;
         console.log("");
     }
