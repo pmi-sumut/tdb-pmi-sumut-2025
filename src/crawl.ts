@@ -2,8 +2,8 @@ import axios, { AxiosError } from "axios";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
-const BASE_URL = "https://gis.bnpb.go.id/server/rest/services/thematic/BANSOR_SUMATERA/MapServer/17/query";
-const PROVINSI = "Sumatera Utara";
+const BASE_URL = process.env.BNPB_URL || "https://gis.bnpb.go.id";
+const PROVINSI = process.env.PROVINSI || "Sumatera Utara";
 const MAX_RETRIES = 16;
 
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID || "YOUR_SHEET_ID_HERE";
@@ -25,6 +25,15 @@ const FIELDS = [
 interface ApiResponse {
     features: Array<{
         attributes: {
+        value: number;
+        };
+    }>;
+}
+
+interface ApiResponseWithKabupaten {
+    features: Array<{
+        attributes: {
+        kabupaten: string;
         value: number;
         };
     }>;
@@ -57,7 +66,8 @@ function formatTimestamp(date: Date): string {
         second: "2-digit",
     });
 }
-async function fetchDataWithRetry(
+
+async function fetchProvinsiData(
     fieldName: string,
     attempt: number = 0
 ): Promise<number> {
@@ -79,9 +89,7 @@ async function fetchDataWithRetry(
         where: `provinsi='${PROVINSI}'`,
         };
 
-        console.log(
-        `[${fieldName}] Attempt ${attempt + 1}/${MAX_RETRIES + 1} - Fetching data...`
-        );
+        console.log(`[${fieldName}] Attempt ${attempt + 1}/${MAX_RETRIES + 1} - Fetching data...`);
 
         const response = await axios.get<ApiResponse>(BASE_URL, {
         params,
@@ -112,17 +120,86 @@ async function fetchDataWithRetry(
 
         if (attempt < MAX_RETRIES) {
         const delay = getRetryDelay(attempt);
-        console.log(
-            `[${fieldName}] Retrying in ${(delay / 1000).toFixed(2)} seconds...`
-        );
+        console.log(`[${fieldName}] Retrying in ${(delay / 1000).toFixed(2)} seconds...`);
         await sleep(delay);
-        return fetchDataWithRetry(fieldName, attempt + 1);
+        return fetchProvinsiData(fieldName, attempt + 1);
         }
 
-        console.error(
-        `[${fieldName}] ✗ Failed after ${MAX_RETRIES + 1} attempts. Using value: 0`
-        );
+        console.error(`[${fieldName}] ✗ Failed after ${MAX_RETRIES + 1} attempts. Using value: 0`);
         return 0;
+    }
+}
+
+async function fetchKabupatenMeninggal(
+    attempt: number = 0
+): Promise<Record<string, number>> {
+    try {
+        const params = {
+        f: "json",
+        cacheHint: "true",
+        groupByFieldsForStatistics: "kabupaten",
+        resultRecordCount: "1000",
+        where: `(meninggal>0) AND (provinsi='${PROVINSI}')`,
+        orderByFields: "value DESC",
+        outFields: "*",
+        outStatistics: JSON.stringify([
+            {
+            onStatisticField: "meninggal",
+            outStatisticFieldName: "value",
+            statisticType: "sum",
+            },
+        ]),
+        returnGeometry: "false",
+        spatialRel: "esriSpatialRelIntersects",
+        };
+
+        console.log(`\n[Meninggal per Kabupaten] Attempt ${attempt + 1}/${MAX_RETRIES + 1} - Fetching...`);
+
+        const response = await axios.get<ApiResponseWithKabupaten>(BASE_URL, {
+        params,
+        timeout: 30000,
+        });
+
+        if (!response.data?.features || !Array.isArray(response.data.features)) {
+        throw new Error("Invalid response structure");
+        }
+
+        const kabupatenData: Record<string, number> = {};
+        response.data.features.forEach((feature) => {
+        const kabupaten = feature.attributes.kabupaten;
+        const value = feature.attributes.value;
+        if (kabupaten && value) {
+            kabupatenData[kabupaten] = value;
+        }
+        });
+
+        console.log(`[Meninggal per Kabupaten] ✓ Found ${Object.keys(kabupatenData).length} kabupaten`);
+        
+        const sorted = Object.entries(kabupatenData)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+        console.log(`  Top 3: ${sorted.map(([k, v]) => `${k} (${v})`).join(", ")}`);
+
+        return kabupatenData;
+    } catch (error) {
+        const errorMessage =
+        error instanceof AxiosError
+            ? `${error.message} (${error.code})`
+            : error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        console.error(`[Meninggal per Kabupaten] ✗ Error: ${errorMessage}`);
+
+        if (attempt < MAX_RETRIES) {
+        const delay = getRetryDelay(attempt);
+        console.log(`[Meninggal per Kabupaten] Retrying in ${(delay / 1000).toFixed(2)} seconds...`);
+        await sleep(delay);
+        return fetchKabupatenMeninggal(attempt + 1);
+        }
+
+        console.error(`[Meninggal per Kabupaten] ✗ Failed to fetch kabupaten data`);
+        return {};
     }
 }
 
@@ -139,10 +216,23 @@ async function fetchAllData(): Promise<CrawlData> {
     };
 
     for (const field of FIELDS) {
-        const value = await fetchDataWithRetry(field.name);
+        const value = await fetchProvinsiData(field.name);
         results[field.label] = value;
         console.log("");
     }
+
+    const kabupatenMeninggal = await fetchKabupatenMeninggal();
+    
+    Object.entries(kabupatenMeninggal).forEach(([kabupaten, value]) => {
+        results[kabupaten] = value;
+    });
+
+    console.log("");
+    console.log("=".repeat(60));
+    console.log(`✓ Data collection completed`);
+    console.log(`  - Provinsi fields: ${FIELDS.length}`);
+    console.log(`  - Kabupaten columns: ${Object.keys(kabupatenMeninggal).length}`);
+    console.log("=".repeat(60));
 
     return results;
 }
@@ -159,7 +249,6 @@ async function initGoogleSheet(): Promise<GoogleSpreadsheet> {
         });
 
         const doc = new GoogleSpreadsheet(GOOGLE_SHEET_ID, serviceAccountAuth);
-        
         await doc.loadInfo();
         
         console.log(`✓ Connected to: ${doc.title}`);
@@ -174,23 +263,28 @@ async function initGoogleSheet(): Promise<GoogleSpreadsheet> {
     }
 }
 
-async function setupSheetHeaders(sheet: any): Promise<void> {
+async function setupSheetHeaders(sheet: any, kabupatenList: string[]): Promise<void> {
     try {
-        await sheet.loadHeaderRow();
+        await sheet.loadCells("A1:ZZ1");
+        const firstCell = sheet.getCell(0, 0);
+        const isSheetEmpty = !firstCell.value || firstCell.value === "";
         
+        if (isSheetEmpty) {
         const expectedHeaders = [
-        ...FIELDS.map((f) => f.label),
-        "Updated At",
+            ...FIELDS.map((f) => f.label),
+            "Updated At",
+            ...kabupatenList,
         ];
-
-    const currentHeaders = sheet.headerValues || [];
-    
-    if (currentHeaders.length === 0) {
-        console.log("Setting up sheet headers...");
+        
+        console.log("Sheet is empty. Setting up headers...");
+        console.log(`  - Base fields: ${FIELDS.length}`);
+        console.log(`  - Kabupaten columns: ${kabupatenList.length}`);
+        console.log(`  - Total columns: ${expectedHeaders.length}`);
         await sheet.setHeaderRow(expectedHeaders);
         console.log("✓ Headers created");
         } else {
-        console.log("✓ Headers already exist");
+        await sheet.loadHeaderRow();
+        console.log(`✓ Using existing headers (${sheet.headerValues.length} columns)`);
         }
     } catch (error) {
         console.error("Error setting up headers:", error);
@@ -204,33 +298,76 @@ async function writeToGoogleSheets(data: CrawlData): Promise<void> {
 
     try {
         const doc = await initGoogleSheet();
-    
-    let sheet = doc.sheetsByIndex[0];
-    
-    if (!sheet) {
+        let sheet = doc.sheetsByIndex[0];
+        
+        if (!sheet) {
         console.log("Creating new sheet...");
         sheet = await doc.addSheet({ title: "Data BNPB" });
-    }
+        }
 
-    await setupSheetHeaders(sheet);
+        const knownFields = new Set([
+        ...FIELDS.map(f => f.label),
+        "updated_at",
+        ]);
+        
+        const kabupatenList = Object.keys(data)
+        .filter(key => !knownFields.has(key))
+        .sort((a, b) => {
+            const aVal = data[a] as number || 0;
+            const bVal = data[b] as number || 0;
+            return bVal - aVal;
+        });
+
+        console.log(`\nKabupaten found in data: ${kabupatenList.length}`);
+
+        await setupSheetHeaders(sheet, kabupatenList);
+
+        await sheet.loadHeaderRow();
+        const headerColumns = sheet.headerValues || [];
+        console.log(`\nSheet has ${headerColumns.length} columns`);
 
     const rowData: any = {};
-    FIELDS.forEach((field) => {
-        rowData[field.label] = data[field.label];
-    });
-    rowData["Updated At"] = formatTimestamp(new Date(data.updated_at));
+        
+        FIELDS.forEach((field) => {
+        if (headerColumns.includes(field.label)) {
+            rowData[field.label] = data[field.label];
+        }
+        });
+        
+        if (headerColumns.includes("Updated At")) {
+        rowData["Updated At"] = formatTimestamp(new Date(data.updated_at));
+        }
+        
+        let kabupatenWritten = 0;
+        let kabupatenSkipped = 0;
+        
+        kabupatenList.forEach((kabupaten) => {
+        if (headerColumns.includes(kabupaten)) {
+            rowData[kabupaten] = data[kabupaten];
+            kabupatenWritten++;
+        } else {
+            kabupatenSkipped++;
+        }
+        });
 
-    console.log("Adding new row...");
-    await sheet.addRow(rowData);
+        console.log(`\nData preparation:`);
+        console.log(`  - Base fields: ${FIELDS.length}`);
+        console.log(`  - Kabupaten written: ${kabupatenWritten}`);
+        if (kabupatenSkipped > 0) {
+        console.log(`  - Kabupaten skipped: ${kabupatenSkipped} (not in header)`);
+        }
 
-    console.log("✓ Data successfully written to Google Sheets");
-    console.log(`Sheet: ${sheet.title}`);
-    console.log(`URL: https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}`);
-    console.log("=".repeat(60));
+        console.log("\nAdding new row...");
+        await sheet.addRow(rowData);
+
+        console.log("✓ Data successfully written to Google Sheets");
+        console.log(`Sheet: ${sheet.title}`);
+        console.log(`URL: https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}`);
+        console.log("=".repeat(60));
     } catch (error) {
         console.error("✗ Failed to write to Google Sheets");
         console.error(error);
-    throw error;
+        throw error;
     }
 }
 
@@ -240,7 +377,7 @@ async function main(): Promise<void> {
     console.log("");
     console.log("╔" + "═".repeat(58) + "╗");
     console.log("║" + " ".repeat(15) + "BNPB DATA CRAWLER" + " ".repeat(25) + "║");
-    console.log("║" + " ".repeat(10) + "Google Sheets Integration" + " ".repeat(22) + "║");
+    console.log("║" + " ".repeat(8) + "Google Sheets + Per Kabupaten" + " ".repeat(20) + "║");
     console.log("╚" + "═".repeat(58) + "╝");
     console.log("");
 
@@ -254,7 +391,7 @@ async function main(): Promise<void> {
         console.error("  - GOOGLE_SERVICE_ACCOUNT_EMAIL");
         console.error("  - GOOGLE_PRIVATE_KEY");
         console.error("");
-        console.error("Or edit the values directly in crawler.ts");
+        console.error("Or edit the values directly in crawl.ts");
         process.exit(1);
         }
 
@@ -277,5 +414,4 @@ async function main(): Promise<void> {
         process.exit(1);
     }
 }
-
 main();
