@@ -5,6 +5,7 @@ import { BNPBService } from "./service/bnpb";
 import { PmiService } from "./service/pmi";
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { KoboService } from "./service/kobo";
 
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID || "";
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
@@ -91,6 +92,31 @@ app.get("/api/pmi/posko", async (c) => {
       );
     }
 
+    return c.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    throw error;
+  }
+});
+
+app.get("/api/kobo/shelter", async (c) => {
+  const data = await KoboService.getShelterStatistics();
+  try {
+    return c.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    throw error;
+  }
+});
+
+app.get("/api/kobo/service", async (c) => {
+  const data = await KoboService.getServiceStatistics();
+  return c.json(data);
+  try {
     return c.json({
       success: true,
       data,

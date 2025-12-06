@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
-const BASE_URL = process.env.BNPB_URL || "https://gis.bnpb.go.id";
+const BASE_URL = process.env.BNPB_API_URL || "https://gis.bnpb.go.id";
 const PROVINSI = process.env.PROVINSI || "Sumatera Utara";
 const MAX_RETRIES = 16;
 
