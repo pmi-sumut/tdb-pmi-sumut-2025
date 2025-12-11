@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+}
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stat-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+#map {
+    height: 550px;
+    border-radius: 16px;
+}
+.pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .7; }
+}
+.facility-card {
+    transition: all 0.3s ease;
+}
+.facility-card:hover {
+    transform: translateY(-4px) scale(1.05);
+}
+.gradient-bg {
+    background: linear-gradient(135deg, var(--tw-gradient-stops));
+}
+.scrollable-victims {
+    max-height: 550px;
+    overflow-y: auto;
+}
+.scrollable-victims::-webkit-scrollbar {
+    width: 8px;
+}
+.scrollable-victims::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+.scrollable-victims::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+.scrollable-victims::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+.scrollable-giat {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.scrollable-giat::-webkit-scrollbar {
+    width: 8px;
+}
+.scrollable-giat::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.scrollable-giat::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.scrollable-giat::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+@media (max-width: 1024px) {
+    .scrollable-giat {
+        max-height: 1000px;
+    }
+}
+@media (max-width: 768px) {
+    .scrollable-giat {
+        max-height: 800px;
+    }
+}
+.skeleton {
+    animation: skeleton-loading 1.5s infinite ease-in-out;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+}
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.skeleton-white {
+    animation: skeleton-loading-white 1.5s infinite ease-in-out;
+    background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+    background-size: 200% 100%;
+}
+@keyframes skeleton-loading-white {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+.chart-container-doughnut {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.modal-content {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+.modal-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+#chartTopLayanan, #chartDistribusiLayanan {
+    cursor: pointer;
+}

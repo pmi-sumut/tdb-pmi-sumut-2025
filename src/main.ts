@@ -1,5 +1,5 @@
-// main.ts
 import { Hono } from "hono";
+import { serveStatic } from 'hono/bun'
 import { cors } from "hono/cors";
 import { BNPBService } from "./service/bnpb";
 import { PmiService } from "./service/pmi";
@@ -114,9 +114,8 @@ app.get("/api/kobo/shelter", async (c) => {
 });
 
 app.get("/api/kobo/service", async (c) => {
-  const data = await KoboService.getServiceStatistics();
-  return c.json(data);
   try {
+    const data = await KoboService.getServiceStatistics();
     return c.json({
       success: true,
       data,
@@ -125,6 +124,10 @@ app.get("/api/kobo/service", async (c) => {
     throw error;
   }
 });
+
+app.use('/_static/*', serveStatic({
+  root: join(process.cwd(), 'public'),
+}))
 
 app.get('/', (c) => {
   const html = readFileSync(join(process.cwd(), 'public/dashboard.html'), 'utf8')
