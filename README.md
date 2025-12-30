@@ -1,6 +1,6 @@
-# TDB-PMI (Tanggap Darurat Bencana - PMI)
+# TDB-PMI Prov SUMUT
 
-Project ini adalah backend service dan data crawler untuk memantau data bencana dari BNPB dan PMI. Dibangun menggunakan [Bun](https://bun.sh) dan [Hono](https://hono.dev).
+Tanggap darurat bencana banjir dan longsor 2025 - Pusat Data dan Teknologi Informasi Palang Merah Indonesia (PMI) Provinsi Sumatera Utara tahun 2025
 
 ## Fitur Utama
 
