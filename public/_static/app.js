@@ -566,8 +566,8 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 const topServices = [...this.serviceData]
-                    .sort((a, b) => b.penerimaManfaat - a.penerimaManfaat)
-                    .slice(0, 5);
+                    .sort((a, b) => b.penerimaManfaat - a.penerimaManfaat);
+                    // .slice(0, 5); // Removed slice to show all data
 
                 if (this.chartTopLayanan) {
                     this.chartTopLayanan.destroy();
@@ -577,6 +577,13 @@ document.addEventListener('alpine:init', () => {
                     this.chartDistribusiLayanan.destroy();
                     this.chartDistribusiLayanan = null;
                 }
+                
+                // Calculate dynamic height based on number of items (approx 40px per item)
+                // Default 400px in CSS, but we can override canvas height attribute or style if needed?
+                // Actually Chart.js in 'maintainAspectRatio: false' will fill parent.
+                // We might need to adjust parent height if we really want to scroll, but user said "tampilan semua data di chart".
+                // If it fits in 400px, great. If not, bars get thin.
+                // Let's rely on standard fitting for now.
 
                 this.chartTopLayanan = new Chart(ctxTop, {
                     type: 'bar',
@@ -585,22 +592,12 @@ document.addEventListener('alpine:init', () => {
                         datasets: [{
                             label: 'Penerima Manfaat',
                             data: topServices.map(s => s.penerimaManfaat),
-                            backgroundColor: [
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(59, 130, 246, 0.8)',
-                                'rgba(16, 185, 129, 0.8)',
-                                'rgba(251, 191, 36, 0.8)',
-                                'rgba(139, 92, 246, 0.8)'
-                            ],
-                            borderColor: [
-                                'rgba(239, 68, 68, 1)',
-                                'rgba(59, 130, 246, 1)',
-                                'rgba(16, 185, 129, 1)',
-                                'rgba(251, 191, 36, 1)',
-                                'rgba(139, 92, 246, 1)'
-                            ],
-                            borderWidth: 2,
-                            borderRadius: 8
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barThickness: 'flex',
+                            maxBarThickness: 32
                         }]
                     },
                     options: {
