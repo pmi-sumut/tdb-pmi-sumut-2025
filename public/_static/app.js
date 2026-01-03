@@ -81,7 +81,6 @@ document.addEventListener('alpine:init', () => {
         chartPengungsiRentan: null,
         chartTopLayanan: null,
         chartDistribusiLayanan: null,
-        chartDistribusiLayanan: null,
         
         updateClock() {
             const now = new Date();
