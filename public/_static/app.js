@@ -71,6 +71,7 @@ document.addEventListener('alpine:init', () => {
         filterServiceEndDate: '',
         filterServiceKabKota: '',
         serviceData: [],
+        serviceController: null,
         giatList: [],
         poskoMarkers: [],
         markerRotationStarted: false,
@@ -80,7 +81,7 @@ document.addEventListener('alpine:init', () => {
         chartPengungsiRentan: null,
         chartTopLayanan: null,
         chartDistribusiLayanan: null,
-        chartsRendered: false,
+        chartDistribusiLayanan: null,
         
         updateClock() {
             const now = new Date();
@@ -413,6 +414,12 @@ document.addEventListener('alpine:init', () => {
         },
         
         async fetchService() {
+            // Abort previous request if exists
+            if (this.serviceController) {
+                this.serviceController.abort();
+            }
+            this.serviceController = new AbortController();
+
             try {
                 const params = new URLSearchParams();
                 if (this.filterServiceStartDate) params.append('start_date', this.filterServiceStartDate);
@@ -420,7 +427,11 @@ document.addEventListener('alpine:init', () => {
                 if (this.filterServiceKabKota) params.append('kab_kota', this.filterServiceKabKota);
                 
                 const url = `${this.baseUrl}${this.apiService}?${params.toString()}`;
-                const res = await fetch(url, { cache: 'no-store' });
+                const res = await fetch(url, { 
+                    cache: 'no-store',
+                    signal: this.serviceController.signal 
+                });
+                
                 if (!res.ok) return;
                 const json = await res.json();
                 if (!json.success || !json.data) return;
@@ -433,7 +444,14 @@ document.addEventListener('alpine:init', () => {
                     this.renderServiceCharts();
                 }, 100);
             } catch (e) {
+                if (e.name === 'AbortError') {
+                    // Ignore abort errors
+                    return;
+                }
                 this.isLoadingService = false;
+            } finally {
+                // If this is the current controller, clear it (only if not aborted/replaced)
+                // But simplified: just leave it, next call will overwrite.
             }
         },
 
@@ -598,12 +616,19 @@ document.addEventListener('alpine:init', () => {
             }
         },
         
-        renderServiceCharts() {
-            if (this.chartsRendered) return;
-            
+        renderServiceCharts(retryCount = 0) {
             const ctxTop = document.getElementById('chartTopLayanan');
             const ctxDist = document.getElementById('chartDistribusiLayanan');
             
+            // If elements are missing and we have retries left, wait and try again
+            if ((!ctxTop || !ctxDist) && retryCount < 5) {
+                setTimeout(() => {
+                    this.renderServiceCharts(retryCount + 1);
+                }, 200);
+                return;
+            }
+
+            // If still missing after retries, or no data, we can't render
             if (!ctxTop || !ctxDist || !this.serviceData || this.serviceData.length === 0) {
                 return;
             }
@@ -742,7 +767,8 @@ document.addEventListener('alpine:init', () => {
                     }
                 });
 
-                this.chartsRendered = true;
+
+                // this.chartsRendered = true; // Removed to allow re-rendering
             } catch (error) {
             }
         },
