@@ -603,7 +603,7 @@ export class KoboService {
             const sub = item.sub_layanan || "";
             const kabKotaId = String(item["kab_kota"] || "");
             const rawName = this.kabKotaDefinitions[kabKotaId];
-            const kabKotaName = rawName ? `PMI ${rawName}` : kabKotaId;
+            const kabKotaName = rawName ? `${rawName}` : kabKotaId;
 
             const detail: GiatDetail = {
                 jenis_kelamin: {
