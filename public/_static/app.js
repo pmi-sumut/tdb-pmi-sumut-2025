@@ -66,6 +66,9 @@ document.addEventListener('alpine:init', () => {
             pengungsiUsia: [],
             pengungsiRentan: []
         },
+        // Service Filter States
+        filterServiceTanggal: '',
+        filterServiceKabKota: '',
         serviceData: [],
         giatList: [],
         poskoMarkers: [],
@@ -410,7 +413,12 @@ document.addEventListener('alpine:init', () => {
         
         async fetchService() {
             try {
-                const res = await fetch(this.baseUrl + this.apiService, { cache: 'no-store' });
+                const params = new URLSearchParams();
+                if (this.filterServiceTanggal) params.append('date', this.filterServiceTanggal);
+                if (this.filterServiceKabKota) params.append('kab_kota', this.filterServiceKabKota);
+                
+                const url = `${this.baseUrl}${this.apiService}?${params.toString()}`;
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) return;
                 const json = await res.json();
                 if (!json.success || !json.data) return;
@@ -890,6 +898,16 @@ document.addEventListener('alpine:init', () => {
                 this.filterSubLayanan = ''; // Reset sub layanan when jenis changes
             });
             this.$watch('filterSubLayanan', () => this.currentLayananPage = 1);
+            
+            // Watchers for Service Filters (Backend)
+            this.$watch('filterServiceTanggal', () => {
+                this.isLoadingService = true;
+                this.fetchService();
+            });
+            this.$watch('filterServiceKabKota', () => {
+                this.isLoadingService = true;
+                this.fetchService();
+            });
 
             setInterval(() => {
                 this.fetchData();

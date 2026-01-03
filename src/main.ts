@@ -127,7 +127,9 @@ app.get("/api/kobo/giat", async (c) => {
 
 app.get("/api/kobo/service", async (c) => {
   try {
-    const data = await KoboService.getServiceStatistics();
+    const date = c.req.query('date');
+    const kabKota = c.req.query('kab_kota');
+    const data = await KoboService.getServiceStatistics(date, kabKota);
     return c.json({
       success: true,
       data,
