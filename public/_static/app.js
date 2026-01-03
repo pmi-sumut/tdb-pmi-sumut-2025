@@ -9,6 +9,13 @@ document.addEventListener('alpine:init', () => {
         apiLayanan: '/kobo/giat',
         isLoadingLayanan: true,
         layananList: [],
+        
+        // Filter States
+        filterTanggal: '',
+        filterKabKota: '',
+        filterJenisLayanan: '',
+        filterSubLayanan: '',
+
         currentLayananPage: 1,
         itemsPerLayananPage: 10,
         lastUpdate: '',
@@ -118,8 +125,35 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        // Filter Options
+        get uniqueKabKota() {
+            return [...new Set(this.layananList.map(item => item.kab_kota_name))].sort();
+        },
+
+        get uniqueJenisLayanan() {
+            return [...new Set(this.layananList.map(item => item.jenis_layanan))].sort();
+        },
+
+        get uniqueSubLayanan() {
+            let list = this.layananList;
+            if (this.filterJenisLayanan) {
+                list = list.filter(item => item.jenis_layanan === this.filterJenisLayanan);
+            }
+            return [...new Set(list.map(item => item.sub_layanan).filter(Boolean))].sort();
+        },
+
+        get filteredLayananList() {
+            return this.layananList.filter(item => {
+                const matchTanggal = !this.filterTanggal || item.tanggal_kegiatan === this.filterTanggal;
+                const matchKabKota = !this.filterKabKota || item.kab_kota_name === this.filterKabKota;
+                const matchJenis = !this.filterJenisLayanan || item.jenis_layanan === this.filterJenisLayanan;
+                const matchSub = !this.filterSubLayanan || item.sub_layanan === this.filterSubLayanan;
+                return matchTanggal && matchKabKota && matchJenis && matchSub;
+            });
+        },
+
         get totalLayanan() {
-            return this.layananList.length;
+            return this.filteredLayananList.length;
         },
 
         get totalLayananPages() {
@@ -129,7 +163,7 @@ document.addEventListener('alpine:init', () => {
         get paginatedLayananList() {
             const start = (this.currentLayananPage - 1) * this.itemsPerLayananPage;
             const end = start + this.itemsPerLayananPage;
-            return this.layananList.slice(start, end);
+            return this.filteredLayananList.slice(start, end);
         },
 
         get layananStartIndex() {
@@ -846,15 +880,24 @@ document.addEventListener('alpine:init', () => {
             this.fetchPosko();
             this.fetchGiat();
             this.fetchWeather();
-            this.fetchLayanan(); // TAMBAHKAN INI
+            this.fetchLayanan();
             
+            // Watchers for filters logic (Alpine watchers can be done in x-init or init)
+            this.$watch('filterTanggal', () => this.currentLayananPage = 1);
+            this.$watch('filterKabKota', () => this.currentLayananPage = 1);
+            this.$watch('filterJenisLayanan', () => {
+                this.currentLayananPage = 1;
+                this.filterSubLayanan = ''; // Reset sub layanan when jenis changes
+            });
+            this.$watch('filterSubLayanan', () => this.currentLayananPage = 1);
+
             setInterval(() => {
                 this.fetchData();
                 this.fetchShelter();
                 this.fetchPosko();
                 this.fetchGiat();
                 this.fetchWeather();
-                this.fetchLayanan(); // TAMBAHKAN INI
+                this.fetchLayanan();
             }, 60000);
         }
     }));
