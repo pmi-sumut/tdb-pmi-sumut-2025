@@ -66,7 +66,12 @@ document.addEventListener('alpine:init', () => {
             pengungsiUsia: [],
             pengungsiRentan: []
         },
+        // Service Filter States
+        filterServiceStartDate: '',
+        filterServiceEndDate: '',
+        filterServiceKabKota: '',
         serviceData: [],
+        serviceController: null,
         giatList: [],
         poskoMarkers: [],
         markerRotationStarted: false,
@@ -76,7 +81,6 @@ document.addEventListener('alpine:init', () => {
         chartPengungsiRentan: null,
         chartTopLayanan: null,
         chartDistribusiLayanan: null,
-        chartsRendered: false,
         
         updateClock() {
             const now = new Date();
@@ -409,8 +413,24 @@ document.addEventListener('alpine:init', () => {
         },
         
         async fetchService() {
+            // Abort previous request if exists
+            if (this.serviceController) {
+                this.serviceController.abort();
+            }
+            this.serviceController = new AbortController();
+
             try {
-                const res = await fetch(this.baseUrl + this.apiService, { cache: 'no-store' });
+                const params = new URLSearchParams();
+                if (this.filterServiceStartDate) params.append('start_date', this.filterServiceStartDate);
+                if (this.filterServiceEndDate) params.append('end_date', this.filterServiceEndDate);
+                if (this.filterServiceKabKota) params.append('kab_kota', this.filterServiceKabKota);
+                
+                const url = `${this.baseUrl}${this.apiService}?${params.toString()}`;
+                const res = await fetch(url, { 
+                    cache: 'no-store',
+                    signal: this.serviceController.signal 
+                });
+                
                 if (!res.ok) return;
                 const json = await res.json();
                 if (!json.success || !json.data) return;
@@ -423,7 +443,14 @@ document.addEventListener('alpine:init', () => {
                     this.renderServiceCharts();
                 }, 100);
             } catch (e) {
+                if (e.name === 'AbortError') {
+                    // Ignore abort errors
+                    return;
+                }
                 this.isLoadingService = false;
+            } finally {
+                // If this is the current controller, clear it (only if not aborted/replaced)
+                // But simplified: just leave it, next call will overwrite.
             }
         },
 
@@ -588,12 +615,19 @@ document.addEventListener('alpine:init', () => {
             }
         },
         
-        renderServiceCharts() {
-            if (this.chartsRendered) return;
-            
+        renderServiceCharts(retryCount = 0) {
             const ctxTop = document.getElementById('chartTopLayanan');
             const ctxDist = document.getElementById('chartDistribusiLayanan');
             
+            // If elements are missing and we have retries left, wait and try again
+            if ((!ctxTop || !ctxDist) && retryCount < 5) {
+                setTimeout(() => {
+                    this.renderServiceCharts(retryCount + 1);
+                }, 200);
+                return;
+            }
+
+            // If still missing after retries, or no data, we can't render
             if (!ctxTop || !ctxDist || !this.serviceData || this.serviceData.length === 0) {
                 return;
             }
@@ -732,7 +766,8 @@ document.addEventListener('alpine:init', () => {
                     }
                 });
 
-                this.chartsRendered = true;
+
+                // this.chartsRendered = true; // Removed to allow re-rendering
             } catch (error) {
             }
         },
@@ -890,6 +925,20 @@ document.addEventListener('alpine:init', () => {
                 this.filterSubLayanan = ''; // Reset sub layanan when jenis changes
             });
             this.$watch('filterSubLayanan', () => this.currentLayananPage = 1);
+            
+            // Watchers for Service Filters (Backend)
+            this.$watch('filterServiceStartDate', () => {
+                this.isLoadingService = true;
+                this.fetchService();
+            });
+            this.$watch('filterServiceEndDate', () => {
+                this.isLoadingService = true;
+                this.fetchService();
+            });
+            this.$watch('filterServiceKabKota', () => {
+                this.isLoadingService = true;
+                this.fetchService();
+            });
 
             setInterval(() => {
                 this.fetchData();

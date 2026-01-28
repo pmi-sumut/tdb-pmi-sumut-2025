@@ -665,15 +665,55 @@
         </div>
 
         <div class="mb-10">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-3xl font-black text-gray-900 flex items-center">
-                    <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mr-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-black text-gray-900 flex items-center shrink-0">
+                    <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mr-3">
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
                     </div>
                     Layanan PMI
                 </h2>
+                <div class="flex flex-col sm:flex-row flex-wrap gap-4 w-full lg:w-auto">
+                    <div class="w-full sm:w-48">
+                        <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                            Dari Tanggal
+                        </label>
+                        <input
+                            type="date"
+                            x-model="filterServiceStartDate"
+                            class="w-full px-4 py-2 rounded-xl border-2 border-gray-200
+                                focus:border-red-500 focus:outline-none transition"
+                        >
+                    </div>
+                    <div class="w-full sm:w-48">
+                        <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                            Sampai Tanggal
+                        </label>
+                        <input
+                            type="date"
+                            x-model="filterServiceEndDate"
+                            class="w-full px-4 py-2 rounded-xl border-2 border-gray-200
+                                focus:border-red-500 focus:outline-none transition"
+                        >
+                    </div>
+                    <div class="w-full sm:w-64">
+                        <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                            Kab / Kota
+                        </label>
+                        <select
+                            x-model="filterServiceKabKota"
+                            class="w-full px-4 py-2 rounded-xl border-2 border-gray-200
+                                focus:border-red-500 focus:outline-none transition bg-white"
+                        >
+                            <option value="">Semua Kab/Kota</option>
+                            <template x-for="item in uniqueKabKota" :key="item">
+                                <option :value="item" x-text="item"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
@@ -800,8 +840,13 @@
                         <div class="skeleton h-96 rounded-2xl"></div>
                     </template>
                     <template x-if="!isLoadingService">
-                        <div class="chart-container">
-                            <canvas id="chartTopLayanan"></canvas>
+                        <div class="h-96">
+                            <div x-show="!serviceData || serviceData.length === 0" class="h-full flex items-center justify-center text-gray-400 font-bold">
+                                Data Tidak Tersedia
+                            </div>
+                            <div x-show="serviceData && serviceData.length > 0" class="chart-container h-full">
+                                <canvas id="chartTopLayanan"></canvas>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -820,8 +865,13 @@
                         <div class="skeleton h-96 rounded-2xl"></div>
                     </template>
                     <template x-if="!isLoadingService">
-                        <div class="chart-container-doughnut">
-                            <canvas id="chartDistribusiLayanan"></canvas>
+                        <div class="h-96">
+                             <div x-show="!serviceData || serviceData.length === 0" class="h-full flex items-center justify-center text-gray-400 font-bold">
+                                Data Tidak Tersedia
+                            </div>
+                            <div x-show="serviceData && serviceData.length > 0" class="chart-container-doughnut h-full">
+                                <canvas id="chartDistribusiLayanan"></canvas>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -1129,7 +1179,7 @@
         </div>
         <!-- END GIAT LAYANAN SECTION -->
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <!-- <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
             <div class="bg-white rounded-3xl shadow-2xl p-8">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <h2 class="text-2xl font-black text-gray-900 flex items-center">
@@ -1173,7 +1223,7 @@
                     </iframe>
                 </div>
             </div>
-        </div>
+        </div> -->
 
     </main>
 
@@ -1383,7 +1433,7 @@
         </div>
     </div>
 
-    <script src="/_static/app.js"></script>
+    <script src="/_static/app.js?v=2"></script>
 
 </body>
 </html>

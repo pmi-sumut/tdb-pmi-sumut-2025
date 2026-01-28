@@ -676,9 +676,26 @@ export class KoboService {
         });
     }
 
-    public static async getServiceStatistics(): Promise<ServiceStatistic[]> {
+    public static async getServiceStatistics(startDate?: string, endDate?: string, kabKota?: string): Promise<ServiceStatistic[]> {
         const data = await this.serviceData();
-        const results: ServiceData[] = data.results || [];
+        let results: ServiceData[] = data.results || [];
+
+        // Filter based on parameters
+        if (startDate) {
+            results = results.filter(item => item.tanggal_keg >= startDate);
+        }
+
+        if (endDate) {
+            results = results.filter(item => item.tanggal_keg <= endDate);
+        }
+
+        if (kabKota) {
+            results = results.filter(item => {
+                const id = String(item.kab_kota);
+                const name = this.kabKotaDefinitions[id];
+                return name === kabKota;
+            });
+        }
 
         // Helper to initialize sub-categories with 0
         const initSubCategory = (definitions: Record<string, string>) => {
