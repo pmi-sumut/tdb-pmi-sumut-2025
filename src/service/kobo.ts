@@ -401,13 +401,35 @@ export class KoboService {
     };
 
     private static async fetch(url: string) {
-        const response = await axios.get(url, {
-            headers: {
-                Authorization: `Token ${API_TOKEN}`,
-                Accept: "application/json",
-            },
-        });
-        return response.data;
+        let allResults: any[] = [];
+        let currentUrl: string | null = url;
+
+        while (currentUrl) {
+            const isInitialUrl = currentUrl === url;
+            const config: import('axios').AxiosRequestConfig = {
+                headers: {
+                    Authorization: `Token ${API_TOKEN}`,
+                    Accept: "application/json",
+                },
+            };
+            
+            if (isInitialUrl && !currentUrl.includes('limit=')) {
+                config.params = { limit: 1000 };
+            }
+
+            const response = await axios.get(currentUrl, config);
+            const responseData: any = response.data;
+
+            if (responseData && Array.isArray(responseData.results)) {
+                allResults = allResults.concat(responseData.results);
+                currentUrl = responseData.next;
+            } else if (Array.isArray(responseData)) {
+                return { results: responseData };
+            } else {
+                return responseData;
+            }
+        }
+        return { results: allResults };
     }
 
     private static async assessmentData() {
